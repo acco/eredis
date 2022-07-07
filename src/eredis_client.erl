@@ -47,6 +47,7 @@
                 connect_timeout :: integer() | undefined,
                 socket_options  :: list(),
                 tls_options     :: list(),
+                sentinel        :: list() | undefined,
 
                 transport       :: gen_tcp | ssl,
                 socket          :: gen_tcp:socket() | ssl:sslsocket() | undefined,
@@ -88,6 +89,7 @@ init(Options) ->
     SocketOptions  = proplists:get_value(socket_options, Options, []),
     TlsOptions     = proplists:get_value(tls, Options, []),
     Transport      = transport_module(TlsOptions),
+    Sentinel       = proplists:get_value(sentinel, Options, undefined),
 
     State = #state{host = Host,
                    port = Port,
@@ -98,6 +100,7 @@ init(Options) ->
                    socket_options = SocketOptions,
                    tls_options = TlsOptions,
                    transport = Transport,
+                   sentinel = Sentinel,
 
                    socket = undefined,
                    parser_state = eredis_parser:init(),
@@ -361,23 +364,41 @@ safe_send(Pid, Value) ->
 %% is scheduled, just in case the connection breaks immediately afterwards,
 %% so we don't reconnect until reconnect_sleep milliseconds has elapsed.
 %% Returns: {ok, State} or {error, Reason}.
-connect(#state{host = Host,
-               port = Port,
+connect(#state{host = Host0,
+               port = Port0,
                socket_options = SocketOptions,
                tls_options = TlsOptions,
                connect_timeout = ConnectTimeout,
                auth_cmd = AuthCmd,
-               database = Db} = State) ->
-    case connect(Host, Port, SocketOptions, TlsOptions,
-                 ConnectTimeout, AuthCmd, Db) of
-        {ok, Socket} ->
-            %% In case the connection terminates immediately (this happens with
-            %% an expired certificate with TLS 1.3) schedule a reconnect already
-            %% so that we don't try to reconnect if an error is received before
-            %% reconnect_sleep milliseconds has elapsed.
-            {ok, schedule_reconnect(unknown, State#state{socket = Socket})};
-        Error ->
-            Error
+               database = Db,
+               sentinel = SentinelOptions} = State) ->
+    Endpoint = case SentinelOptions of
+                     undefined -> {Host0, Port0};
+                     _ ->
+                         MasterGroup = proplists:get_value(master_group, SentinelOptions, mymaster),
+                         case whereis(MasterGroup) of
+                             undefined -> eredis_sentinel:start_link(MasterGroup, SentinelOptions);
+                             _ -> ok
+                         end,
+                         case eredis_sentinel:get_master(MasterGroup) of
+                             {ok, Host1, Port1} -> {Host1, Port1};
+                             SentinelError -> SentinelError
+                         end
+                 end,
+    case Endpoint of
+        {error, _} = Err -> Err;
+        {Host, Port} ->
+            case connect(Host, Port, SocketOptions, TlsOptions,
+                         ConnectTimeout, AuthCmd, Db) of
+                {ok, Socket} ->
+                    %% In case the connection terminates immediately (this happens with
+                    %% an expired certificate with TLS 1.3) schedule a reconnect already
+                    %% so that we don't try to reconnect if an error is received before
+                    %% reconnect_sleep milliseconds has elapsed.
+                    {ok, schedule_reconnect(unknown, State#state{socket = Socket})};
+                Error ->
+                    Error
+            end
     end.
 
 %% Connect helper also used by eredis_sub_client.
