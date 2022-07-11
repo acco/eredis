@@ -8,10 +8,10 @@ Non-blocking Redis client with focus on performance and robustness.
 
 This fork is the official continuation of `wooga/eredis`.
 It includes several improvements, such as
-TLS support and TCP error handling corrections. See [CHANGELOG.md](CHANGELOG.md)
-for details.
+TLS support, Sentinel support and TCP error handling corrections.
+See [CHANGELOG.md](CHANGELOG.md) for details.
 
-Note: This client connects to a standalone Redis node/sentinel cluster.
+Note: This client connects to a standalone Redis node, optionally using Sentinel.
 For *Redis Cluster*, you need
 [eredis_cluster](https://github.com/Nordix/eredis_cluster) or
 [ecredis](https://github.com/HalloAppInc/ecredis).
@@ -23,6 +23,7 @@ Supported Redis features:
  * Pipelining
  * Authentication & multiple DBs
  * Pubsub
+ * TLS
  * Sentinel support
 
 Generated API documentation: [doc/eredis.md](doc/eredis.md)

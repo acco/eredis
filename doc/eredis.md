@@ -41,7 +41,7 @@ host() = string() | {local, string()}
 
 
 <pre><code>
-option() = {host, string() | {local, string()}} | {port, <a href="inet.md#type-port_number">inet:port_number()</a>} | {database, integer()} | {password, string()} | {reconnect_sleep, <a href="#type-reconnect_sleep">reconnect_sleep()</a>} | {connect_timeout, integer()} | {socket_options, list()} | {tls, [<a href="ssl.md#type-tls_client_option">ssl:tls_client_option()</a>]} | {name, <a href="#type-registered_name">registered_name()</a>} | {sentinel, list()}
+option() = {host, string() | {local, string()}} | {port, <a href="inet.md#type-port_number">inet:port_number()</a>} | {database, integer()} | {username, iodata() | fun(() -&gt; iodata()) | undefined} | {password, iodata() | fun(() -&gt; iodata()) | undefined} | {reconnect_sleep, <a href="#type-reconnect_sleep">reconnect_sleep()</a>} | {connect_timeout, integer()} | {socket_options, list()} | {tls, [<a href="ssl.md#type-tls_client_option">ssl:tls_client_option()</a>]} | {name, <a href="#type-registered_name">registered_name()</a>} | {sentinel, list()}
 </code>
 </pre>
 
@@ -278,7 +278,10 @@ start_link(Options::<a href="#type-options">options()</a>) -&gt; {ok, pid()} | {
 
 
 
-<dd>String; default: no username
+<dd>A 0-ary function that returns the username
+  (the preferred way to provide username as it prevents the actual secret from
+  appearing in logs and stacktraces), a string or iodata or the
+  atom <code>undefined</code> for no username; default <code>undefined</code>
 </dd>
 
 
@@ -287,7 +290,10 @@ start_link(Options::<a href="#type-options">options()</a>) -&gt; {ok, pid()} | {
 
 
 
-<dd>String; default: no password
+<dd>A 0-ary function that returns the password
+  (the preferred way to provide password as it prevents the actual secret from
+  appearing in logs and stacktraces), a string or iodata or the
+  atom <code>undefined</code> for no username; default <code>undefined</code>
 </dd>
 
 

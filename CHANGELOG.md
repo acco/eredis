@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v1.6.0
+
+July 2022.
+
+* Adds sentinel support.
+
+* Obfuscates username and password in the state, to prevent them from appearing
+  verbatim in logs and stack traces. They can be provided as 0-ary functions
+  returning the actual secret when applied.
+
+* Fix a crash that happens when reconnect fails twice with two different
+  reasons. This bug was introduced in v1.5.0.
+
 ## v1.5.1
 
 May 2022.
@@ -13,7 +26,7 @@ May 2022.
   The option `reconnect_sleep` now applies to the time between a
   successful connect and the first reconnect attemt, if the connection is lost
   just after connecting. However, there is no delay before reconnecting
-  if the connection has been up for at least `reconnect_sleep' milliseconds.
+  if the connection has been up for at least `reconnect_sleep` milliseconds.
 
 ## v1.5.0
 

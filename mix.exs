@@ -2,7 +2,7 @@ defmodule Eredis.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/Nordix/eredis/"
-  @version "1.5.1"
+  @version "1.6.0"
 
   def project do
     [
