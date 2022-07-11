@@ -41,7 +41,7 @@
 -record(state, {
                 host            :: string() | {local, string()} | undefined,
                 port            :: integer() | undefined,
-                auth_cmd        :: iodata() | undefined,
+                auth_cmd        :: fun(() -> iodata()) | undefined,
                 database        :: binary() | undefined,
                 reconnect_sleep :: reconnect_sleep() | undefined,
                 connect_timeout :: integer() | undefined,
@@ -239,8 +239,11 @@ terminate(_Reason, #state{socket = undefined}) ->
 terminate(_Reason, #state{socket = Socket, transport = Transport}) ->
     Transport:close(Socket).
 
-code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
+%% Code change succeeds only if the state record has not changed.
+code_change(_OldVsn, #state{} = State, _Extra) ->
+    {ok, State};
+code_change(_OldVsn, _State, _Extra) ->
+    {error, not_implemented}.
 
 %%--------------------------------------------------------------------
 %%% Internal functions
@@ -407,7 +410,7 @@ connect(#state{host = Host0,
               SocketOptions  :: list(),
               TlsOptions     :: list(),
               ConnectTimeout :: integer() | undefined,
-              AuthCmd        :: iodata() | undefined,
+              AuthCmd        :: fun(() -> iodata()) | undefined,
               Db             :: binary() | undefined) ->
           {ok, Socket :: gen_tcp:socket() | ssl:sslsocket()} |
           {error, Reason :: term()}.
@@ -516,8 +519,8 @@ select_database(Socket, TransportType, Database) ->
 
 authenticate(_Socket, _TransportType, undefined) ->
     ok;
-authenticate(Socket, TransportType, AuthCmd) ->
-    do_sync_command(Socket, TransportType, AuthCmd).
+authenticate(Socket, TransportType, AuthCmd) when is_function(AuthCmd, 0) ->
+    do_sync_command(Socket, TransportType, AuthCmd()).
 
 %% @doc: Executes the given command synchronously, expects Redis to
 %% return "+OK\r\n", otherwise it will fail.
@@ -604,14 +607,28 @@ read_database(undefined) ->
 read_database(Database) when is_integer(Database) ->
     list_to_binary(integer_to_list(Database)).
 
--spec get_auth_command(Username :: iodata() | undefined,
-                       Password :: iodata() | undefined) ->
-          iodata() | undefined.
-get_auth_command(undefined, undefined) ->
-    undefined;
-get_auth_command(undefined, "") -> % legacy
-    undefined;
-get_auth_command(undefined, Password) ->
-    eredis:create_multibulk([<<"AUTH">>, Password]);
+-spec get_auth_command(Username :: iodata() | fun(() -> iodata()) | undefined,
+                       Password :: iodata() | fun(() -> iodata()) | undefined) ->
+          fun(() -> iodata()) | undefined.
 get_auth_command(Username, Password) ->
-    eredis:create_multibulk([<<"AUTH">>, Username, Password]).
+    case {deobfuscate(Username), deobfuscate(Password)} of
+        {undefined, undefined} ->
+            undefined;
+        {undefined, ""} ->                      % legacy
+            undefined;
+        {undefined, Pass} ->
+            AuthCmd = eredis:create_multibulk([<<"AUTH">>, Pass]),
+            fun () -> AuthCmd end;
+        {User, Pass} ->
+            AuthCmd = eredis:create_multibulk([<<"AUTH">>, User, Pass]),
+            fun () -> AuthCmd end
+    end.
+
+-spec deobfuscate(iodata() | fun(() -> iodata()) | undefined) ->
+          iodata() | undefined.
+deobfuscate(undefined) ->
+    undefined;
+deobfuscate(String) when is_list(String); is_binary(String) ->
+    String;
+deobfuscate(Fun) when is_function(Fun, 0) ->
+    Fun().

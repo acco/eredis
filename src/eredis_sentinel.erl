@@ -20,8 +20,8 @@
 -record(eredis_sentinel_state, {
                                 master_group    :: atom(),
                                 endpoints       :: [{string() | {local, string()} , integer()}],
-                                username        :: string() | undefined,
-                                password        :: string() | undefined,
+                                username        :: fun(() -> iodata()) | undefined,
+                                password        :: fun(() -> iodata()) | undefined,
                                 connect_timeout :: integer() | undefined,
                                 socket_options  :: list(),
                                 tls_options     :: list(),
@@ -70,8 +70,8 @@ init(Options) ->
     TlsOptions          = proplists:get_value(tls, Options, []),
     {ok, #eredis_sentinel_state{master_group = MasterGroup,
                                 endpoints = Endpoints,
-                                username = Username,
-                                password = Password,
+                                username = obfuscate(Username),
+                                password = obfuscate(Password),
                                 connect_timeout = ConnectTimeout,
                                 socket_options = SocketOptions,
                                 tls_options = TlsOptions,
@@ -240,3 +240,15 @@ get_master_response({ok, undefined}) ->
     {error, ?MASTER_UNKNOWN};
 get_master_response({error, <<"IDONTKNOW", _Rest/binary >>}) ->
     {error, ?MASTER_UNREACHABLE}.
+
+%% Obfuscate a string by wrapping it in a fun that returns the string when
+%% applied. This hides the secrets from stacktraces and logs.
+-spec obfuscate(iodata() | fun(() -> iodata()) | undefined) ->
+          fun(() -> iodata()) | undefined.
+obfuscate(undefined) ->
+    undefined;
+obfuscate(String) when is_list(String); is_binary(String) ->
+    fun () -> String end;
+obfuscate(Fun) when is_function(Fun, 0) ->
+    %% Already obfuscated
+    Fun.
