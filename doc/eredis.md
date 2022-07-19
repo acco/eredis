@@ -36,12 +36,24 @@ host() = string() | {local, string()}
 
 
 
+<a name="type-obfuscated"></a>
+### obfuscated() ###
+
+
+<pre><code>
+obfuscated() = fun(() -&gt; iodata())
+</code>
+</pre>
+
+
+
+
 <a name="type-option"></a>
 ### option() ###
 
 
 <pre><code>
-option() = {host, string() | {local, string()}} | {port, <a href="inet.md#type-port_number">inet:port_number()</a>} | {database, integer()} | {username, iodata() | fun(() -&gt; iodata()) | undefined} | {password, iodata() | fun(() -&gt; iodata()) | undefined} | {reconnect_sleep, <a href="#type-reconnect_sleep">reconnect_sleep()</a>} | {connect_timeout, integer()} | {socket_options, list()} | {tls, [<a href="ssl.md#type-tls_client_option">ssl:tls_client_option()</a>]} | {name, <a href="#type-registered_name">registered_name()</a>} | {sentinel, list()}
+option() = {host, string() | {local, string()}} | {port, <a href="inet.md#type-port_number">inet:port_number()</a>} | {database, integer()} | {username, iodata() | <a href="#type-obfuscated">obfuscated()</a> | undefined} | {password, iodata() | <a href="#type-obfuscated">obfuscated()</a> | undefined} | {reconnect_sleep, <a href="#type-reconnect_sleep">reconnect_sleep()</a>} | {connect_timeout, integer()} | {socket_options, list()} | {tls, [<a href="ssl.md#type-tls_client_option">ssl:tls_client_option()</a>]} | {name, <a href="#type-registered_name">registered_name()</a>} | {sentinel, list()}
 </code>
 </pre>
 

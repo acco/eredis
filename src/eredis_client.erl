@@ -41,7 +41,7 @@
 -record(state, {
                 host            :: string() | {local, string()} | undefined,
                 port            :: integer() | undefined,
-                auth_cmd        :: fun(() -> iodata()) | undefined,
+                auth_cmd        :: obfuscated() | undefined,
                 database        :: binary() | undefined,
                 reconnect_sleep :: reconnect_sleep() | undefined,
                 connect_timeout :: integer() | undefined,
@@ -376,18 +376,18 @@ connect(#state{host = Host0,
                database = Db,
                sentinel = SentinelOptions} = State) ->
     Endpoint = case SentinelOptions of
-                     undefined -> {Host0, Port0};
-                     _ ->
-                         MasterGroup = proplists:get_value(master_group, SentinelOptions, mymaster),
-                         case whereis(MasterGroup) of
-                             undefined -> eredis_sentinel:start_link(MasterGroup, SentinelOptions);
-                             _ -> ok
-                         end,
-                         case eredis_sentinel:get_master(MasterGroup) of
-                             {ok, Host1, Port1} -> {Host1, Port1};
-                             SentinelError -> SentinelError
-                         end
-                 end,
+                   undefined -> {Host0, Port0};
+                   _ ->
+                       MasterGroup = proplists:get_value(master_group, SentinelOptions, mymaster),
+                       case whereis(MasterGroup) of
+                           undefined -> eredis_sentinel:start_link(MasterGroup, SentinelOptions);
+                           _ -> ok
+                       end,
+                       case eredis_sentinel:get_master(MasterGroup) of
+                           {ok, Host1, Port1} -> {Host1, Port1};
+                           SentinelError -> SentinelError
+                       end
+               end,
     case Endpoint of
         {error, _} = Err -> Err;
         {Host, Port} ->
@@ -410,7 +410,7 @@ connect(#state{host = Host0,
               SocketOptions  :: list(),
               TlsOptions     :: list(),
               ConnectTimeout :: integer() | undefined,
-              AuthCmd        :: fun(() -> iodata()) | undefined,
+              AuthCmd        :: obfuscated() | undefined,
               Db             :: binary() | undefined) ->
           {ok, Socket :: gen_tcp:socket() | ssl:sslsocket()} |
           {error, Reason :: term()}.
@@ -607,9 +607,9 @@ read_database(undefined) ->
 read_database(Database) when is_integer(Database) ->
     list_to_binary(integer_to_list(Database)).
 
--spec get_auth_command(Username :: iodata() | fun(() -> iodata()) | undefined,
-                       Password :: iodata() | fun(() -> iodata()) | undefined) ->
-          fun(() -> iodata()) | undefined.
+-spec get_auth_command(Username :: iodata() | obfuscated() | undefined,
+                       Password :: iodata() | obfuscated() | undefined) ->
+          obfuscated() | undefined.
 get_auth_command(Username, Password) ->
     case {deobfuscate(Username), deobfuscate(Password)} of
         {undefined, undefined} ->
