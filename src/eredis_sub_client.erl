@@ -58,6 +58,7 @@ init(Options) ->
                          [] -> gen_tcp;
                          _ -> ssl
                      end,
+    Active         = eredis_client:get_active(SocketOptions, TlsOptions),
 
     %% eredis_pub specific options
     MaxQueueSize   = proplists:get_value(max_queue_size, Options, infinity),
@@ -73,6 +74,7 @@ init(Options) ->
                    socket_options  = SocketOptions,
                    tls_options     = TlsOptions,
                    transport       = Transport,
+                   active          = Active,
                    channels        = [],
                    pchannels       = [],
                    parser_state    = eredis_parser:init(),
@@ -182,10 +184,8 @@ handle_cast(_Msg, State) ->
 
 
 %% Receive TCP/TLS data from socket. Match `Socket' to enforce sanity.
-handle_info({Type, Socket, Bs},
-            #state{socket = Socket, transport = Transport} = State)
+handle_info({Type, Socket, Bs}, #state{socket = Socket} = State)
   when Type =:= tcp; Type =:= ssl->
-    ok = setopts(Socket, Transport, [{active, once}]),
     NewState = handle_response(Bs, State),
     case queue:len(NewState#state.msg_queue) > NewState#state.max_queue_size of
         true ->
@@ -199,6 +199,17 @@ handle_info({Type, Socket, Bs},
             end;
         false ->
             {noreply, NewState}
+    end;
+
+%% Socket switched to passive mode due to {active, N}.
+handle_info({Passive, Socket},
+            #state{socket = Socket, transport = Transport, active = N} = State)
+  when Passive =:= tcp_passive; Passive =:= ssl_passive ->
+    case setopts(Socket, Transport, [{active, N}]) of
+        ok ->
+            {noreply, State};
+        {error, Reason} ->
+            maybe_reconnect(Reason, State)
     end;
 
 handle_info({Error, Socket, _Reason}, #state{socket = Socket} = State)
@@ -354,11 +365,11 @@ queue_or_send(Msg, State) ->
 %% synchronous and if Redis returns something we don't expect, we
 %% crash. Returns {ok, State} or {error, Reason}.
 connect(#state{host = Host, port = Port, socket_options = SocketOptions,
-               transport = Transport,
+               transport = Transport, active = Active,
                connect_timeout = ConnectTimeout, tls_options = TlsOptions,
                auth_cmd = AuthCmd, database = Db} = State) ->
     case eredis_client:connect(Host, Port, SocketOptions, TlsOptions,
-                               ConnectTimeout, AuthCmd, Db) of
+                               ConnectTimeout, AuthCmd, Db, Active) of
         {ok, Socket} ->
             %% Re-subscribe to channels. Channels are stored in reverse order in
             %% state.
@@ -366,7 +377,6 @@ connect(#state{host = Host, port = Port, socket_options = SocketOptions,
                                         lists:reverse(State#state.channels)),
             ok = send_subscribe_command(Transport, Socket, "PSUBSCRIBE",
                                         lists:reverse(State#state.pchannels)),
-            ok = setopts(Socket, Transport, [{active, once}]),
 
             %% Notify application that connection is ready.
             send_to_controller({eredis_connected, self()}, State),
