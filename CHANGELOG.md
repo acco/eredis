@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v1.7.1
+
+July 2023.
+
+* Allow floats in commands.
+
+* Remove unused include-lib eunit.hrl which caused problems for Elixir users.
+
 ## v1.7.0
 
 July 2022.
