@@ -113,7 +113,7 @@ registered_name() = {local, atom()} | {global, term()} | {via, atom(), term()}
 
 
 <pre><code>
-return_value() = undefined | binary() | [binary() | nonempty_list()]
+return_value() = undefined | binary() | [binary() | list() | undefined]
 </code>
 </pre>
 
@@ -139,7 +139,7 @@ specified connection.</td></tr><tr><td valign="top"><a href="#qp-3">qp/3</a></td
 ### q/2 ###
 
 <pre><code>
-q(Client::<a href="#type-client">client()</a>, Command::[any()]) -&gt; {ok, <a href="#type-return_value">return_value()</a>} | {error, Reason::binary() | no_connection}
+q(Client::<a href="#type-client">client()</a>, Command::[any()]) -&gt; {ok, <a href="#type-return_value">return_value()</a>} | {error, Reason::any() | no_connection}
 </code>
 </pre>
 
@@ -154,7 +154,7 @@ always be binaries.
 ### q/3 ###
 
 <pre><code>
-q(Client::<a href="#type-client">client()</a>, Command::[any()], Timeout::timeout()) -&gt; {ok, <a href="#type-return_value">return_value()</a>} | {error, Reason::binary() | no_connection}
+q(Client::<a href="#type-client">client()</a>, Command::[any()], Timeout::timeout()) -&gt; {ok, <a href="#type-return_value">return_value()</a>} | {error, Reason::any() | no_connection}
 </code>
 </pre>
 
@@ -210,7 +210,7 @@ __See also:__ [q/2](#q-2).
 ### qp/2 ###
 
 <pre><code>
-qp(Client::<a href="#type-client">client()</a>, Pipeline::<a href="#type-pipeline">pipeline()</a>) -&gt; [{ok, <a href="#type-return_value">return_value()</a>} | {error, Reason::binary()}] | {error, no_connection}
+qp(Client::<a href="#type-client">client()</a>, Pipeline::<a href="#type-pipeline">pipeline()</a>) -&gt; [{ok, <a href="#type-return_value">return_value()</a>} | {error, Reason::any() | no_connection}]
 </code>
 </pre>
 
@@ -225,7 +225,7 @@ values returned by each command in the pipeline are returned in a list.
 ### qp/3 ###
 
 <pre><code>
-qp(Client::<a href="#type-client">client()</a>, Pipeline::<a href="#type-pipeline">pipeline()</a>, Timeout::timeout()) -&gt; [{ok, <a href="#type-return_value">return_value()</a>} | {error, Reason::binary()}] | {error, no_connection}
+qp(Client::<a href="#type-client">client()</a>, Pipeline::<a href="#type-pipeline">pipeline()</a>, Timeout::timeout()) -&gt; [{ok, <a href="#type-return_value">return_value()</a>} | {error, Reason::any() | no_connection}]
 </code>
 </pre>
 
