@@ -502,16 +502,16 @@ get_addrs(Hostname) ->
         {ok, {_, _, _, _} = Addr} ->             {ok, {inet, [Addr]}};
         {ok, {_, _, _, _, _, _, _, _} = Addr} -> {ok, {inet6, [Addr]}};
         {error, einval} ->
-            case inet:getaddrs(Hostname, inet6) of
+            case inet:getaddrs(Hostname, inet) of
                 {error, _} ->
-                    case inet:getaddrs(Hostname, inet) of
+                    case inet:getaddrs(Hostname, inet6) of
                         {ok, Addrs} ->
-                            {ok, {inet, deduplicate(Addrs)}};
+                            {ok, {inet6, deduplicate(Addrs)}};
                         {error, _} = Res ->
                             Res
                     end;
                 {ok, Addrs} ->
-                    {ok, {inet6, deduplicate(Addrs)}}
+                    {ok, {inet, deduplicate(Addrs)}}
             end
     end.
 
